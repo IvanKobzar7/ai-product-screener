@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 const MARKETPLACE_LABELS = {
   amazon: "Amazon",
@@ -68,7 +68,8 @@ function App() {
           use_ai: form.use_ai,
         }),
       });
-      if (!response.ok) throw new Error(`Request failed (${response.status})`);
+      if (response.status === 429) throw new Error("Too many requests. Please try again in an hour.");
+      if (!response.ok) throw new Error(`Request failed (${response.status})`);      
       setResult(await response.json());
     } catch (err) {
       setError(err.message === "Failed to fetch" ? "Cannot reach the backend." : err.message);

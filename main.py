@@ -1,15 +1,34 @@
-from fastapi.middleware.cors import CORSMiddleware
+import os
+
 from anthropic import APIError
-from fastapi import FastAPI, HTTPException
+from dotenv import load_dotenv
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from ai import get_ai_verdict
 from fees import MARKETPLACE_FEES, Marketplace, calculate_marketplace_fee
 
+load_dotenv()
+
+# Comma-separated list of frontend URLs allowed to call this API
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+
+# Max /analyze requests per IP address, to protect the Claude API budget
+ANALYZE_RATE_LIMIT = os.getenv("ANALYZE_RATE_LIMIT", "30/hour")
+
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="AI Product Screener")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -66,7 +85,8 @@ def list_marketplaces():
 
 
 @app.post("/analyze", response_model=ProductAnalysis)
-def analyze(product: ProductInput):
+@limiter.limit(ANALYZE_RATE_LIMIT)
+def analyze(request: Request, product: ProductInput):
     marketplace_fee = calculate_marketplace_fee(
         product.marketplace,
         product.sell_price,
