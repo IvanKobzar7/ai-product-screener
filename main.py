@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from anthropic import APIError
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from ai import get_ai_verdict
 from fees import MARKETPLACE_FEES, Marketplace, calculate_marketplace_fee
 
 app = FastAPI(title="AI Product Screener")
@@ -20,6 +22,7 @@ class ProductInput(BaseModel):
         description="Set this if your category has a different commission rate",
     )
     monthly_sales: int = Field(default=0, ge=0)
+    use_ai: bool = Field(default=False, description="Ask Claude for a BUY/MAYBE/SKIP verdict")
 
 
 class ProductAnalysis(BaseModel):
@@ -32,6 +35,7 @@ class ProductAnalysis(BaseModel):
     margin_percent: float
     roi_percent: float
     monthly_profit: float
+    ai_verdict: str | None = None
 
 
 @app.get("/health")
@@ -64,7 +68,7 @@ def analyze(product: ProductInput):
     total_fees = marketplace_fee + product.fulfillment_fee
     profit = product.sell_price - product.buy_cost - total_fees
 
-    return ProductAnalysis(
+    result = ProductAnalysis(
         product_name=product.product_name,
         marketplace=product.marketplace,
         marketplace_fee=round(marketplace_fee, 2),
@@ -75,3 +79,11 @@ def analyze(product: ProductInput):
         roi_percent=round(profit / product.buy_cost * 100, 2),
         monthly_profit=round(profit * product.monthly_sales, 2),
     )
+
+    if product.use_ai:
+        try:
+            result.ai_verdict = get_ai_verdict(result.model_dump())
+        except APIError as error:
+            raise HTTPException(status_code=502, detail=f"AI service error: {error}")
+
+    return result
