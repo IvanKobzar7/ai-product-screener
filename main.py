@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from anthropic import APIError
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -6,6 +7,12 @@ from ai import get_ai_verdict
 from fees import MARKETPLACE_FEES, Marketplace, calculate_marketplace_fee
 
 app = FastAPI(title="AI Product Screener")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class ProductInput(BaseModel):
