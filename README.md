@@ -5,6 +5,10 @@ Pick a marketplace (Amazon, Walmart, eBay, Etsy or TikTok Shop), enter your cost
 and get profit, margin and ROI after marketplace fees, plus an AI verdict
 (**BUY / MAYBE / SKIP**) from Claude.
 
+**Live demo:** https://ai-product-screener.vercel.app
+
+> The backend runs on a free server that sleeps when idle, so the first request may take up to a minute.
+
 ![AI Product Screener screenshot](docs/screenshot.png)
 
 ## Why I built it
@@ -84,5 +88,5 @@ App: http://localhost:5173
 
 - [ ] Save analysis history in a database
 - [ ] Unit tests for fee calculations
-- [ ] Deploy (Vercel + Render)
+- [x] Deploy (Vercel + Render)
 - [ ] Category-specific fee tables
